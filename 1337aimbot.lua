@@ -6,12 +6,14 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
+-- [[ 0. SYSTEM VARIABLES ]] --
 local Connections = {} 
 local ESP_Cache = {} 
 local FOV_Circle = nil
 local UIVisible = true
 local MenuGui, ESPGui
 
+-- [[ 1. CONFIGURATION ]] --
 local Settings = {
     ESP_Enabled = false,
     ESP_Box = true,        
@@ -25,7 +27,7 @@ local Settings = {
     Fly_Speed = 1,
     
     Aimbot_Enabled = false,
-    Aimbot_Mode = "Smooth",
+    Aimbot_Mode = "Smooth", -- Default
     Aim_FOV = 150,
     Aim_Smoothness = 0.2,
     Aim_TeamCheck = true,
@@ -36,6 +38,7 @@ local Settings = {
 
 local IsAiming = false
 
+-- [[ 2. CORE GUI ENFORCER ]] --
 local function GetParent()
     if gethui then return gethui() end
     return game:GetService("CoreGui") 
@@ -61,6 +64,7 @@ ESPLayer.Parent = ESPGui
 ESPLayer.BackgroundTransparency = 1
 ESPLayer.Size = UDim2.new(1, 0, 1, 0)
 
+-- [[ 3. UNLOAD SYSTEM ]] --
 local function UnloadScript()
     for _, conn in pairs(Connections) do
         if conn then conn:Disconnect() end
@@ -80,6 +84,7 @@ local function UnloadScript()
     end
 end
 
+-- [[ 4. UI LIBRARY ]] --
 local Library = {}
 
 function Library:Tween(obj, props, time)
@@ -183,17 +188,22 @@ function Library:Window(name)
         
         return TabObj
     end
-    return
+    return WindowObj
+end
+
+-- [[ 5. MAIN LOGIC ]] --
 local UI = Library:Window("1337")
 
 local AimTab = UI:Tab("Aimbot")
 AimTab:Toggle("Enable Aimbot", false, function(v) Settings.Aimbot_Enabled = v end)
 AimTab:Toggle("Team Check", true, function(v) Settings.Aim_TeamCheck = v end)
+-- [NEW] Silent Mode Toggle
 AimTab:Toggle("Silent Mode (Force)", false, function(v) 
     Settings.Aimbot_Mode = v and "Force" or "Smooth" 
 end)
 AimTab:Keybind("Aim Key", Enum.UserInputType.MouseButton2, function(v) Settings.Aim_Key = v end)
 AimTab:Slider("FOV Radius", 10, 500, 150, function(v) Settings.Aim_FOV = v end)
+-- [UPDATED] Smoothness Max to 2
 AimTab:Slider("Smoothness", 0.1, 2, 0.2, function(v) Settings.Aim_Smoothness = v end)
 
 local VisTab = UI:Tab("Visuals")
@@ -218,6 +228,8 @@ MiscTab:Toggle("Enable Fly", false, function(v) Settings.Fly_Enabled = v end)
 MiscTab:Slider("Fly Speed", 0, 5, 1, function(v) Settings.Fly_Speed = v end)
 MiscTab:Keybind("Toggle UI", Enum.KeyCode.RightShift, function(v) Settings.ToggleKey = v end)
 MiscTab:Button("Unload Script", function() UnloadScript() end)
+
+-- [[ 6. GAMEPLAY LOOPS ]] --
 
 local leaveConn = Players.PlayerRemoving:Connect(function(plr)
     if ESP_Cache[plr] then
@@ -261,6 +273,7 @@ local function CreateESP(plr)
 end
 
 local Loop1 = RunService.RenderStepped:Connect(function()
+    -- Anti-Stuck
     for plr, _ in pairs(ESP_Cache) do
         if not Players:FindFirstChild(plr.Name) then RemoveESP(plr) end
     end
@@ -341,6 +354,7 @@ local Loop2 = RunService.RenderStepped:Connect(function()
         local target = GetClosestPlayer()
         if target then
             local pos = Camera:WorldToViewportPoint(target.Position)
+            -- [UPDATED] Check Mode
             if Settings.Aimbot_Mode == "Force" then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
             elseif mousemoverel then
